@@ -26,6 +26,10 @@ dot_git_path = None
 git_annex_tmp = ".git/annex/pynex-git-annex"
 
 
+def anx_timestamp():
+    return "%.5f0000s" % time.time()
+
+
 def hash_file(fname):
     hasher = hashlib.sha256()
     with open(fname, "rb") as f:
@@ -35,6 +39,12 @@ def hash_file(fname):
                 break
             hasher.update(buf)
     return hasher.hexdigest()
+
+
+def ensure_dir(path):
+    dirpath = path.rsplit("/", 1)[0]
+    if not os.path.isdir(dirpath):
+        os.makedirs(dirpath)
 
 
 def anx_key(fname):
@@ -49,9 +59,17 @@ def anx_key_hash(key):
     return hasher.hexdigest()
 
 
-def anx_key_path(key):
+def anx_key_subpath(key):
     keyhash = anx_key_hash(key)
-    return dot_git_path + ".git/annex/objects/" + keyhash[0:3] + "/" + keyhash[3:6] + "/" + key
+    return keyhash[0:3] + "/" + keyhash[3:6] + "/" + key
+
+
+def anx_key_content_path(key):
+    return dot_git_path + ".git/annex/objects/" + anx_key_subpath(key) + "/" + key
+
+
+def anx_key_metadata_path(key):
+    return dot_git_path + ".git/annex/pynex-git-annex/" + anx_key_subpath(key)
 
 
 def find_dot_git():
@@ -130,12 +148,12 @@ def cmd_calckey(args):
 
 
 def cmd_contentlocation(args):
-    print(anx_key_path(args.key))
+    print(anx_key_content_path(args.key))
 
 
 def cmd_calclocation(args):
     key = anx_key(args.file)
-    print(anx_key_path(key))
+    print(anx_key_content_path(key))
 
 
 def cmd_uuid(args):
