@@ -181,6 +181,44 @@ def cmd_repos(args):
             print("%s %s %s" % (uuid, tstamp, desc))
 
 
+def parse_loc_file(fname):
+    loc_map = {}
+    with open(fname) as f:
+        for l in f:
+            tstamp, pres, uuid = l.rstrip().split(" ")
+            if uuid in loc_map:
+                prev_tstamp, prev_pres = loc_map[uuid]
+                if tstamp < prev_tstamp:
+                    continue
+            loc_map[uuid] = (tstamp, int(pres))
+    return loc_map
+
+
+def cmd_add(args):
+    here = get_this_uuid()
+    key = anx_key(args.file)
+    path = anx_key_content_path(key)
+    ensure_dir(path)
+    os.rename(args.file, path)
+    os.symlink(path, args.file)
+
+    locfile = anx_key_metadata_path(key) + ".log"
+    ensure_dir(locfile)
+
+    present = False
+    if os.path.exists(locfile):
+        loc_map = parse_loc_file(locfile)
+        #print(loc_map)
+        tstamp, present = loc_map.get(here, (0, 0))
+
+    if not present:
+        with open(locfile, "a") as f:
+            f.write("%s 1 %s\n" % (anx_timestamp(), here))
+        commit_git_annex_file(anx_key_subpath(key) + ".log")
+
+    subprocess.check_call(["git", "add", args.file])
+
+
 def cmd_git_annex_co(args):
     checkout_git_annex()
 
@@ -199,6 +237,10 @@ argp = argparse.ArgumentParser(description="Subset of git-annex reimplemented in
 argp.set_defaults(func=cmd_help)
 
 subparsers = argp.add_subparsers(title="Commands", metavar="")
+
+subargp = subparsers.add_parser("add", help="schedule addition of a file to repository")
+subargp.add_argument("file")
+subargp.set_defaults(func=cmd_add)
 
 subargp = subparsers.add_parser("uuid", help="print UUID of current repository")
 subargp.set_defaults(func=cmd_uuid)
