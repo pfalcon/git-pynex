@@ -154,7 +154,12 @@ def cmd_git_annex_cat(args):
         print(f.read())
 
 
+def cmd_help(args):
+    argp.print_help()
+
+
 argp = argparse.ArgumentParser(description="Subset of git-annex reimplemented in Python")
+argp.set_defaults(func=cmd_help)
 
 subparsers = argp.add_subparsers(title="Commands", metavar="")
 
