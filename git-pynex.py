@@ -18,6 +18,7 @@ import sys
 import hashlib
 import os
 import time
+import subprocess
 import argparse
 
 
@@ -79,8 +80,24 @@ def checkout_git_annex(fname="."):
     assert res == 0
 
 
-def open_git_annex_file(fname):
-    return open("%s/%s" % (git_annex_tmp, fname))
+def open_git_annex_file(fname, mode="r"):
+    return open("%s/%s" % (git_annex_tmp, fname), mode)
+
+
+def exec_get_line(cmd):
+    return subprocess.check_output(cmd, shell=True).decode().strip()
+
+
+def commit_git_annex_file(fname):
+    save_dir = os.getcwd()
+    try:
+        os.chdir(git_annex_tmp)
+        subprocess.check_call("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. add %s" % fname, shell=True)
+        tree_id = exec_get_line("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. write-tree")
+        commit_id = exec_get_line("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. commit-tree -p git-annex -m update %s" % tree_id)
+        subprocess.check_call("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. update-ref refs/heads/git-annex %s" % commit_id, shell=True)
+    finally:
+        os.chdir(save_dir)
 
 
 annex_remote_map = {}
