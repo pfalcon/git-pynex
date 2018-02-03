@@ -51,7 +51,7 @@ def anx_key_hash(key):
 
 def anx_key_path(key):
     keyhash = anx_key_hash(key)
-    return dot_git_path + "/.git/annex/objects/" + keyhash[0:3] + "/" + keyhash[3:6] + "/" + key
+    return dot_git_path + ".git/annex/objects/" + keyhash[0:3] + "/" + keyhash[3:6] + "/" + key
 
 
 def find_dot_git():
@@ -60,7 +60,9 @@ def find_dot_git():
     while path:
         #print(path, res)
         if os.path.isdir(res + "/.git"):
-            return res
+            if res == ".":
+                return ""
+            return res[2:] + "/"
         res = res + "/.."
         path = path.rsplit("/", 1)[0]
     return None
@@ -105,7 +107,7 @@ annex_remote_map = {}
 
 def parse_git_config():
     global annex_remote_map
-    with open(dot_git_path + "/.git/config") as f:
+    with open(dot_git_path + ".git/config") as f:
         sec = None
         for l in f:
             l = l.rstrip()
@@ -209,6 +211,6 @@ args = argp.parse_args()
 #print(args)
 
 dot_git_path = find_dot_git()
-git_annex_tmp = dot_git_path + "/" + git_annex_tmp
+git_annex_tmp = dot_git_path + git_annex_tmp
 
 args.func(args)
