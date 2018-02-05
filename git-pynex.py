@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # git-pynex - Subset of git-annex functionality in Python
 #
 # Copyright (c) 2018 Paul Sokolovsky
