@@ -232,10 +232,16 @@ def cmd_git_annex_cat(args):
 
 def cmd_help(args):
     argp.print_help()
+    sys.exit(0)
+
+
+def fatal(msg):
+    sys.stderr.write("git-pynex: %s\n" % msg)
+    sys.exit(1)
 
 
 argp = argparse.ArgumentParser(description="Subset of git-annex reimplemented in Python")
-argp.set_defaults(func=cmd_help)
+argp.set_defaults(func=None)
 
 subparsers = argp.add_subparsers(title="Commands", metavar="")
 
@@ -271,7 +277,13 @@ subargp.set_defaults(func=cmd_git_annex_cat)
 args = argp.parse_args()
 #print(args)
 
+if args.func is None:
+    cmd_help(args)
+
 dot_git_path = find_dot_git()
+if dot_git_path is None:
+    fatal("Not in a git repository.")
+
 git_annex_tmp = dot_git_path + git_annex_tmp
 
 args.func(args)
