@@ -92,6 +92,12 @@ def get_this_uuid():
         return f.read().rstrip()
 
 
+def assert_this_uuid():
+    uuid = get_this_uuid()
+    if not uuid:
+        fatal("Not a git-annex repository (not initialized?)")
+
+
 def checkout_git_annex(fname="."):
     "Checkout file(s) from git-annex branch"
     if not os.path.isdir(git_annex_tmp):
@@ -196,6 +202,7 @@ def parse_loc_file(fname):
 
 
 def cmd_add(args):
+    assert_this_uuid()
     here = get_this_uuid()
     key = anx_key(args.file)
     path = anx_key_content_path(key)
