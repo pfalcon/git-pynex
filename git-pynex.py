@@ -20,6 +20,7 @@ import hashlib
 import os
 import time
 import subprocess
+import uuid
 import argparse
 
 
@@ -115,13 +116,19 @@ def exec_get_line(cmd):
     return subprocess.check_output(cmd, shell=True).decode().strip()
 
 
-def commit_git_annex_file(fname):
+def commit_git_annex_file(fname, msg="update", parent="git-annex"):
+    # fname can be "." to commit entire tree
     save_dir = os.getcwd()
     try:
         os.chdir(git_annex_tmp)
         subprocess.check_call("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. add %s" % fname, shell=True)
         tree_id = exec_get_line("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. write-tree")
-        commit_id = exec_get_line("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. commit-tree -p git-annex -m update %s" % tree_id)
+        if parent:
+            parent = "-p " + parent
+        else:
+            parent = ""
+        commit_id = exec_get_line("GIT_INDEX_FILE=../git-annex.index.out git "
+            "--work-tree=. commit-tree %s -m '%s' %s" % (parent, msg, tree_id))
         subprocess.check_call("GIT_INDEX_FILE=../git-annex.index.out git --work-tree=. update-ref refs/heads/git-annex %s" % commit_id, shell=True)
     finally:
         os.chdir(save_dir)
@@ -227,6 +234,28 @@ def cmd_add(args):
     subprocess.check_call(["git", "add", args.file])
 
 
+def cmd_init(args):
+    if os.path.isdir(git_annex_tmp):
+        fatal("Annex is already initialized.")
+    os.makedirs(git_annex_tmp)
+
+    if not args.description:
+        args.description = "my repo"
+    my_uuid = str(uuid.uuid1())
+    tstamp = anx_timestamp()
+
+    with open_git_annex_file("uuid.log", mode="w") as f:
+        f.write("%s %s timestamp=%s\n" % (my_uuid, args.description, tstamp))
+    with open_git_annex_file("difference.log", mode="w") as f:
+        f.write("%s fromList [ObjectHashLower] timestamp=%s\n" % (my_uuid, anx_timestamp()))
+
+    commit_git_annex_file(".", msg="branch created", parent=None)
+
+    subprocess.check_call(["git", "config", "annex.uuid", my_uuid])
+    subprocess.check_call(["git", "config", "annex.version", "5"])
+    subprocess.check_call(["git", "config", "annex.tune.objecthashlower", "true"])
+
+
 def cmd_git_annex_co(args):
     checkout_git_annex()
 
@@ -251,6 +280,10 @@ argp = argparse.ArgumentParser(description="Subset of git-annex reimplemented in
 argp.set_defaults(func=None)
 
 subparsers = argp.add_subparsers(title="Commands", metavar="")
+
+subargp = subparsers.add_parser("init", help="initialize annex repository")
+subargp.add_argument("description", nargs="?", help="human-readable repository description")
+subargp.set_defaults(func=cmd_init)
 
 subargp = subparsers.add_parser("add", help="schedule addition of a file to repository")
 subargp.add_argument("file")
