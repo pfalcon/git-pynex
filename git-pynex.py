@@ -53,7 +53,10 @@ def anx_key(fname):
     hsh = hash_file(fname)
     size = os.stat(fname)[6]
     ext = ".".join(fname.rsplit(".", 2)[1:])
-    return "SHA256E-s%d--%s.%s" % (size, hsh, ext)
+    key = "SHA256E-s%d--%s" % (size, hsh)
+    if ext:
+        key += "." + ext
+    return key
 
 
 def anx_key_hash(key):
