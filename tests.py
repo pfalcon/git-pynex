@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 from subprocess import check_call, check_output
 
 
@@ -89,3 +90,30 @@ def test_add2():
 
     assert sorted(os.listdir()) == ['.git', '5de', 'difference.log', 'uuid.log']
     assert os.path.isfile("5de/9ee/SHA256E-s11--5eb788ac2bded6ce7112e44d68228bfecb3e569d1d745c78e1275986bbedc3cf.log")
+
+
+def _test_sync_uncommited():
+    make_repo("/tmp/annex-test4")
+    make_file("file1", "file1 data\n")
+    run("git add file1")
+    try:
+        # TODO: would fail on dummy remote name anyway
+        run(GIT_PYNEX + "sync foo-remote")
+        assert False
+    except subprocess.CalledProcessError:
+        pass
+
+
+def test_sync():
+    make_repo("/tmp/annex-test5")
+    make_file("file1", "file1 data\n")
+    run(GIT_PYNEX + "add file1")
+    run("git commit -m 'file1 added'")
+
+    make_repo("/tmp/annex-test6")
+    make_file("file2", "file2 data\n")
+    run(GIT_PYNEX + "add file2")
+    run("git commit -m 'file2 added'")
+
+    run("git remote add another /tmp/annex-test5")
+    run(GIT_PYNEX + "sync another")
