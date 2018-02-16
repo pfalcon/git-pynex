@@ -102,6 +102,12 @@ def assert_this_uuid():
         fatal("Not a git-annex repository (not initialized?)")
 
 
+def assert_no_uncommitted():
+    out = exec_get_line("git status -uno --porcelain")
+    if out:
+        fatal("There are uncommitted changes in the repository, commit them first")
+
+
 def checkout_git_annex(fname="."):
     "Checkout file(s) from git-annex branch"
     if not os.path.isdir(git_annex_tmp):
@@ -237,6 +243,40 @@ def cmd_add(args):
     subprocess.check_call(["git", "add", args.file])
 
 
+def cmd_sync(args):
+    assert_no_uncommitted()
+    subprocess.check_call(["git", "fetch", args.remote])
+
+    save_dir = os.getcwd()
+    if dot_git_path:
+        os.chdir(dot_git_path)
+
+    subprocess.check_call(["git", "checkout", "git-annex"])
+    assert not os.path.exists(".gitattributes")
+    with open(".gitattributes", "w") as f:
+        f.write("** merge=union\n")
+    subprocess.check_call([
+        "git", "merge", "--allow-unrelated-histories",
+        "-m", "merging %s/git-annex into git-annex" % args.remote,
+        "remotes/%s/git-annex" % args.remote
+    ])
+    os.remove(".gitattributes")
+
+    # TODO: use current branch, not master
+    subprocess.check_call(["git", "checkout", "master"])
+    subprocess.check_call([
+        "git", "merge", "--allow-unrelated-histories",
+        "--no-edit",
+        #"-m", "Merge remote-tracking branch 'remotes/%s/master'" % args.remote,
+        #"--log",
+        "remotes/%s/master" % args.remote
+    ])
+
+    subprocess.check_call(["git", "push", args.remote, "git-annex", "master:synced/master"])
+
+    os.chdir(save_dir)
+
+
 def cmd_init(args):
     if os.path.isdir(git_annex_tmp):
         fatal("Annex is already initialized.")
@@ -291,6 +331,10 @@ subargp.set_defaults(func=cmd_init)
 subargp = subparsers.add_parser("add", help="schedule addition of a file to repository")
 subargp.add_argument("file")
 subargp.set_defaults(func=cmd_add)
+
+subargp = subparsers.add_parser("sync", help="sync repo metadata with a specific remote")
+subargp.add_argument("remote")
+subargp.set_defaults(func=cmd_sync)
 
 subargp = subparsers.add_parser("uuid", help="print UUID of current repository")
 subargp.set_defaults(func=cmd_uuid)
