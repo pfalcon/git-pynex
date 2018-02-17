@@ -122,6 +122,8 @@ def open_git_annex_file(fname, mode="r"):
 
 
 def exec_get_line(cmd):
+    if isinstance(cmd, list):
+        return subprocess.check_output(cmd).decode().strip()
     return subprocess.check_output(cmd, shell=True).decode().strip()
 
 
@@ -277,6 +279,44 @@ def cmd_sync(args):
     os.chdir(save_dir)
 
 
+def cmd_resolvemerge(args):
+    out = exec_get_line("git status -uno --porcelain")
+    commit_msg = "git-annex automatic merge conflict fix\n"
+    for l in out.split("\n"):
+        status, fname = l.split(" ", 1)
+        if not os.path.islink(fname):
+            continue
+        linked = os.readlink(fname)
+        if ".git/annex/objects/" not in linked:
+            continue
+
+        print("%s is conflicted annex file" % fname)
+        if status == "AA":
+            linked1 = exec_get_line(["git", "show", ":2:" + fname])
+            #print(linked1)
+            linked2 = exec_get_line(["git", "show", ":3:" + fname])
+            #print(linked2)
+            names = [fname]
+            for linked in (linked1, linked2):
+                key = linked.rsplit("/", 1)[1]
+                key_hash = anx_key_hash(key)
+                #print(key, key_hash)
+                new_fname = "%s.variant-%s" % (fname, key_hash[:4])
+                os.symlink(linked, new_fname)
+                subprocess.check_call(["git", "add", new_fname])
+                names.append(new_fname)
+
+            subprocess.check_call(["git", "rm", "-q", fname])
+            msg = "add/add conflict for '%s': resolved to '%s' (ours) and '%s' (theirs)" % tuple(names)
+            print(msg)
+            commit_msg += "\n" + msg
+
+        else:
+            assert False, status
+
+    subprocess.check_call(["git", "commit", "-m", commit_msg])
+
+
 def cmd_init(args):
     if os.path.isdir(git_annex_tmp):
         fatal("Annex is already initialized.")
@@ -335,6 +375,9 @@ subargp.set_defaults(func=cmd_add)
 subargp = subparsers.add_parser("sync", help="sync repo metadata with a specific remote")
 subargp.add_argument("remote")
 subargp.set_defaults(func=cmd_sync)
+
+subargp = subparsers.add_parser("resolvemerge", help="resolve merge conflicts in annexed files")
+subargp.set_defaults(func=cmd_resolvemerge)
 
 subargp = subparsers.add_parser("uuid", help="print UUID of current repository")
 subargp.set_defaults(func=cmd_uuid)
