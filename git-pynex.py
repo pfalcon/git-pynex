@@ -266,13 +266,17 @@ def cmd_sync(args):
 
     # TODO: use current branch, not master
     subprocess.check_call(["git", "checkout", "master"])
-    subprocess.check_call([
+    rc = subprocess.call([
         "git", "merge", "--allow-unrelated-histories",
         "--no-edit",
         #"-m", "Merge remote-tracking branch 'remotes/%s/master'" % args.remote,
         #"--log",
         "remotes/%s/master" % args.remote
     ])
+
+    if rc == 1:
+        # Assuming merge conflict
+        cmd_resolvemerge(args)
 
     subprocess.check_call(["git", "push", args.remote, "git-annex", "master:synced/master"])
 
