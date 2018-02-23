@@ -286,6 +286,8 @@ def cmd_sync(args):
 def cmd_resolvemerge(args):
     out = exec_get_line("git status -uno --porcelain")
     commit_msg = "git-annex automatic merge conflict fix\n"
+    changed = False
+
     for l in out.split("\n"):
         status, fname = l.split(" ", 1)
         if not os.path.islink(fname):
@@ -294,7 +296,10 @@ def cmd_resolvemerge(args):
         if ".git/annex/objects/" not in linked:
             continue
 
-        print("%s is conflicted annex file" % fname)
+        if not changed:
+            print("\nAutomatically resolving annex files merge conflicts")
+
+        #print("%s is conflicted annex file" % fname)
         if status == "AA":
             linked1 = exec_get_line(["git", "show", ":2:" + fname])
             #print(linked1)
@@ -314,11 +319,14 @@ def cmd_resolvemerge(args):
             msg = "add/add conflict for '%s': resolved to '%s' (ours) and '%s' (theirs)" % tuple(names)
             print(msg)
             commit_msg += "\n" + msg
+            changed = True
 
         else:
             assert False, status
 
-    subprocess.check_call(["git", "commit", "-m", commit_msg])
+    if changed:
+        subprocess.check_call(["git", "commit", "-m", commit_msg])
+        print("\n*** Merge conflict was automatically resolved; you may want to examine the result. ***\n")
 
 
 def cmd_init(args):
