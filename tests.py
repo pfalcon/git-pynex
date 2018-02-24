@@ -117,3 +117,22 @@ def test_sync():
 
     run("git remote add another /tmp/annex-test5")
     run(GIT_PYNEX + "sync another")
+
+
+def test_sync_conflict():
+    make_repo("/tmp/annex-test7")
+    make_file("file1", "file1 data1\n")
+    run(GIT_PYNEX + "add file1")
+    run("git commit -m 'file1 added'")
+
+    make_repo("/tmp/annex-test8")
+    make_file("file1", "file1 data2\n")
+    run(GIT_PYNEX + "add file1")
+    run("git commit -m 'file1 added too'")
+
+    run("git remote add another /tmp/annex-test7")
+
+    print()
+    run(GIT_PYNEX + "sync another")
+
+    assert sorted(os.listdir()) == ['.git', 'file1.variant-7352', 'file1.variant-9f02']
