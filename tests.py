@@ -119,6 +119,25 @@ def test_sync():
     run(GIT_PYNEX + "sync another")
 
 
+def test_sync_mutual():
+    make_repo("/tmp/annex-test7", "test-repo1")
+    make_file("file1", "file1 data\n")
+    run(GIT_PYNEX + "add file1")
+    run("git commit -m 'file1 added'")
+
+    make_repo("/tmp/annex-test8", "test-repo2")
+    make_file("file2", "file2 data\n")
+    run(GIT_PYNEX + "add file2")
+    run("git commit -m 'file2 added'")
+
+    run("git remote add test7 /tmp/annex-test7")
+    run(GIT_PYNEX + "sync test7")
+
+    os.chdir("/tmp/annex-test7")
+    run("git remote add test8 /tmp/annex-test8")
+    run(GIT_PYNEX + "sync test8")
+
+
 def test_sync_conflict():
     make_repo("/tmp/annex-test7")
     make_file("file1", "file1 data1\n")
