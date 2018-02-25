@@ -186,6 +186,7 @@ def cmd_uuid(args):
 
 
 def cmd_repos(args):
+    assert_this_uuid()
     parse_git_config()
     #print(annex_remote_map)
     here = get_this_uuid()
