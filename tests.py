@@ -26,14 +26,14 @@ def read_file(fname):
         return f.read()
 
 
-def make_repo(path):
+def make_repo(path, desc="test-repo"):
     if os.path.exists(path):
         run("chmod -R +w " + path)
         shutil.rmtree(path) #, ignore_errors=True)
     os.makedirs(path)
     os.chdir(path)
     run("git init")
-    run(GIT_PYNEX + "init test-repo")
+    run(GIT_PYNEX + "init " + desc)
 
 
 def test_init():
@@ -105,12 +105,12 @@ def _test_sync_uncommited():
 
 
 def test_sync():
-    make_repo("/tmp/annex-test5")
+    make_repo("/tmp/annex-test5", "test-repo1")
     make_file("file1", "file1 data\n")
     run(GIT_PYNEX + "add file1")
     run("git commit -m 'file1 added'")
 
-    make_repo("/tmp/annex-test6")
+    make_repo("/tmp/annex-test6", "test-repo2")
     make_file("file2", "file2 data\n")
     run(GIT_PYNEX + "add file2")
     run("git commit -m 'file2 added'")
