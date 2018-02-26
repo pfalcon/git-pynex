@@ -145,11 +145,8 @@ def commit_git_annex_file(fname, msg="update", parent="git-annex"):
         os.chdir(save_dir)
 
 
-annex_remote_map = {}
-
-
 def parse_git_config():
-    global annex_remote_map
+    conf_dict = {}
     with open(dot_git_path + ".git/config") as f:
         sec = None
         for l in f:
@@ -159,13 +156,23 @@ def parse_git_config():
                 l = l.split(" ", 1)
                 sec_name = None
                 sec = l[0]
+                sec_dict = conf_dict.setdefault(sec, {})
                 if len(l) > 1:
                     sec_name = l[1].strip('"')
+                    sec_dict = sec_dict.setdefault(sec_name, {})
                 #print(sec, sec_name)
             else:
                 key, val = [x.strip() for x in l.split("=")]
-                if key == "annex-uuid":
-                    annex_remote_map[val] = sec_name
+                sec_dict[key] = val
+    return conf_dict
+
+
+def get_remote_map(git_conf):
+    res = {}
+    for remote, props in git_conf["remote"].items():
+        res[props["annex-uuid"]] = props
+        res[props["annex-uuid"]]["name"] = remote
+    return res
 
 
 def cmd_calckey(args):
@@ -186,9 +193,9 @@ def cmd_uuid(args):
 
 
 def cmd_repos(args):
+    git_conf = parse_git_config()
+    annex_remote_map = get_remote_map(git_conf)
     assert_this_uuid()
-    parse_git_config()
-    #print(annex_remote_map)
     here = get_this_uuid()
     checkout_git_annex("uuid.log")
     print("UUID | Created | Description | Git remote info")
@@ -203,7 +210,7 @@ def cmd_repos(args):
             if uuid == here:
                 desc += " [here]"
             elif uuid in annex_remote_map:
-                desc += " [git remote: %s]" % annex_remote_map[uuid]
+                desc += " [git remote: %s]" % annex_remote_map[uuid]["name"]
             print("%s %s %s" % (uuid, tstamp, desc))
 
 
