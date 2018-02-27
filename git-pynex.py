@@ -91,6 +91,14 @@ def find_dot_git():
     return None
 
 
+def get_remote_uuid(remote):
+    with os.popen("git config remote.%s.url" % remote, "r") as f:
+        url = f.read().rstrip()
+    assert url.startswith("/")
+    with os.popen("git --git-dir=%s/.git config annex.uuid" % url, "r") as f:
+        return f.read().rstrip()
+
+
 def get_this_uuid():
     with os.popen("git config annex.uuid", "r") as f:
         return f.read().rstrip()
@@ -255,7 +263,10 @@ def cmd_add(args):
 
 def cmd_sync(args):
     assert_no_uncommitted()
+    remote_uuid = get_remote_uuid(args.remote)
+
     subprocess.check_call(["git", "fetch", args.remote])
+    subprocess.check_call(["git", "config", "remote.%s.annex-uuid" % args.remote, remote_uuid])
 
     save_dir = os.getcwd()
     if dot_git_path:
