@@ -106,6 +106,7 @@ def _test_sync_uncommited():
 
 def test_sync():
     make_repo("/tmp/annex-test5", "test-repo1")
+    test5_uuid = popen("git config annex.uuid").strip()
     make_file("file1", "file1 data\n")
     run(GIT_PYNEX + "add file1")
     run("git commit -m 'file1 added'")
@@ -117,6 +118,9 @@ def test_sync():
 
     run("git remote add another /tmp/annex-test5")
     run(GIT_PYNEX + "sync another")
+    another_uuid = popen("git config remote.another.annex-uuid").strip()
+    print(another_uuid)
+    assert another_uuid == test5_uuid
 
 
 def test_sync_mutual():
