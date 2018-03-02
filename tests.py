@@ -122,6 +122,10 @@ def test_sync():
     print(another_uuid)
     assert another_uuid == test5_uuid
 
+    assert sorted(os.listdir()) == ['.git', 'file1', 'file2']
+    assert os.path.exists("file2")
+    assert not os.path.exists("file1")
+
 
 def test_sync_mutual():
     make_repo("/tmp/annex-test7", "test-repo1")
