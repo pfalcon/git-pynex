@@ -140,10 +140,16 @@ def test_sync_mutual():
 
     run("git remote add test7 /tmp/annex-test7")
     run(GIT_PYNEX + "sync test7")
+    assert sorted(os.listdir()) == ['.git', 'file1', 'file2']
+    assert os.path.exists("file2")
+    assert not os.path.exists("file1")
 
     os.chdir("/tmp/annex-test7")
     run("git remote add test8 /tmp/annex-test8")
     run(GIT_PYNEX + "sync test8")
+    assert sorted(os.listdir()) == ['.git', 'file1', 'file2']
+    assert not os.path.exists("file2")
+    assert os.path.exists("file1")
 
 
 def test_sync_conflict():
