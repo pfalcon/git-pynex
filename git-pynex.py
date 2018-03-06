@@ -69,12 +69,21 @@ def anx_key_subpath(key):
     return keyhash[0:3] + "/" + keyhash[3:6] + "/" + key
 
 
-def anx_key_content_path(key):
-    return dot_git_path + ".git/annex/objects/" + anx_key_subpath(key) + "/" + key
+def anx_key_content_path(key, root=None):
+    if root is None:
+        root = dot_git_path
+    if root and not root.endswith("/"):
+        root += "/"
+    return root + ".git/annex/objects/" + anx_key_subpath(key) + "/" + key
 
 
 def anx_key_metadata_path(key):
     return dot_git_path + ".git/annex/pynex-git-annex/" + anx_key_subpath(key)
+
+
+def anx_content_path_to_key(path):
+    assert ".git/annex/objects/" in path
+    return path.rsplit("/", 1)[1]
 
 
 def find_dot_git():
@@ -348,6 +357,41 @@ def cmd_resolvemerge(args):
         print("\n*** Merge conflict was automatically resolved; you may want to examine the result. ***\n")
 
 
+def cmd_get(args):
+    assert_this_uuid()
+    here = get_this_uuid()
+
+    git_conf = parse_git_config()
+    annex_remote_map = get_remote_map(git_conf)
+
+    for fname in args.paths:
+        if os.path.exists(fname):
+            print("'%s' already available locally" % fname)
+            continue
+        linked = os.readlink(fname)
+        key = anx_content_path_to_key(linked)
+        checkout_git_annex(anx_key_subpath(key) + ".log")
+        locfile = anx_key_metadata_path(key) + ".log"
+        loc_map = parse_loc_file(locfile)
+        #print(key, locfile)
+        #print(loc_map)
+        for uuid, (tstamps, present) in loc_map.items():
+            assert present
+            if uuid in annex_remote_map:
+                remote_info = annex_remote_map[uuid]
+                #print("Found '%s' in repo %s (remote: '%s' %s)" % (
+                #    fname, uuid, remote_info["name"], remote_info["url"]
+                #))
+                remote_fpath = anx_key_content_path(key, root=remote_info["url"])
+                subprocess.check_call(("cp", remote_fpath, "."))
+                local_fpath = anx_key_content_path(key)
+                ensure_dir(local_fpath)
+                os.rename(key, local_fpath)
+                print("Fetched '%s' from repo %s (remote: '%s' %s)" % (
+                    fname, uuid, remote_info["name"], remote_info["url"]
+                ))
+
+
 def cmd_init(args):
     if os.path.isdir(git_annex_tmp):
         fatal("Annex is already initialized.")
@@ -406,6 +450,10 @@ subargp.set_defaults(func=cmd_add)
 subargp = subparsers.add_parser("sync", help="sync repo metadata with a specific remote")
 subargp.add_argument("remote")
 subargp.set_defaults(func=cmd_sync)
+
+subargp = subparsers.add_parser("get", help="make content of annexed files available")
+subargp.add_argument("paths", nargs="+")
+subargp.set_defaults(func=cmd_get)
 
 subargp = subparsers.add_parser("resolvemerge", help="resolve merge conflicts in annexed files")
 subargp.set_defaults(func=cmd_resolvemerge)
