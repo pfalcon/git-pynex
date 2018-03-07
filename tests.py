@@ -189,3 +189,14 @@ def test_sync_conflict_many():
     print()
     run(GIT_PYNEX + "sync another")
     assert sorted(os.listdir()) == ['.git', 'file1.variant-7352', 'file1.variant-9f02', 'file2.variant-8d47', 'file2.variant-af85']
+
+
+def test_get():
+    test_sync()
+
+    assert not os.path.exists("file1")
+    run(GIT_PYNEX + "get file1")
+    assert os.path.exists("file1")
+    assert read_file("file1") == "file1 data\n"
+    # Should be no error
+    run(GIT_PYNEX + "get file1")
