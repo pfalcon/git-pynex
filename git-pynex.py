@@ -247,27 +247,29 @@ def parse_loc_file(fname):
 def cmd_add(args):
     assert_this_uuid()
     here = get_this_uuid()
-    key = anx_key(args.file)
-    path = anx_key_content_path(key)
-    ensure_dir(path)
-    os.rename(args.file, path)
-    os.symlink(path, args.file)
 
-    locfile = anx_key_metadata_path(key) + ".log"
-    ensure_dir(locfile)
+    for file in args.files:
+        key = anx_key(file)
+        path = anx_key_content_path(key)
+        ensure_dir(path)
+        os.rename(file, path)
+        os.symlink(path, file)
 
-    present = False
-    if os.path.exists(locfile):
-        loc_map = parse_loc_file(locfile)
-        #print(loc_map)
-        tstamp, present = loc_map.get(here, (0, 0))
+        locfile = anx_key_metadata_path(key) + ".log"
+        ensure_dir(locfile)
 
-    if not present:
-        with open(locfile, "a") as f:
-            f.write("%s 1 %s\n" % (anx_timestamp(), here))
-        commit_git_annex_file(anx_key_subpath(key) + ".log")
+        present = False
+        if os.path.exists(locfile):
+            loc_map = parse_loc_file(locfile)
+            #print(loc_map)
+            tstamp, present = loc_map.get(here, (0, 0))
 
-    subprocess.check_call(["git", "add", args.file])
+        if not present:
+            with open(locfile, "a") as f:
+                f.write("%s 1 %s\n" % (anx_timestamp(), here))
+            commit_git_annex_file(anx_key_subpath(key) + ".log")
+
+    subprocess.check_call(["git", "add"] + args.files)
 
 
 def cmd_sync(args):
@@ -444,7 +446,7 @@ subargp.add_argument("description", nargs="?", help="human-readable repository d
 subargp.set_defaults(func=cmd_init)
 
 subargp = subparsers.add_parser("add", help="schedule addition of a file to repository")
-subargp.add_argument("file")
+subargp.add_argument("files", nargs="+")
 subargp.set_defaults(func=cmd_add)
 
 subargp = subparsers.add_parser("sync", help="sync repo metadata with a specific remote")
