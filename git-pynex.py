@@ -438,6 +438,7 @@ def fatal(msg):
 
 argp = argparse.ArgumentParser(description="Subset of git-annex reimplemented in Python")
 argp.set_defaults(func=None)
+argp.add_argument("--debug", action="store_true")
 
 subparsers = argp.add_subparsers(title="Commands", metavar="")
 
